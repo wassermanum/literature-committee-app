@@ -1,0 +1,205 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum definitions
+enum UserRole {
+  GROUP
+  LOCAL_SUBCOMMITTEE
+  LOCALITY
+  REGION
+  ADMIN
+}
+
+enum OrganizationType {
+  GROUP
+  LOCAL_SUBCOMMITTEE
+  LOCALITY
+  REGION
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  IN_ASSEMBLY
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  REJECTED
+}
+
+enum TransactionType {
+  INCOMING
+  OUTGOING
+  ADJUSTMENT
+}
+
+// Models
+model User {
+  id             String       @id @default(cuid())
+  email          String       @unique
+  password       String
+  firstName      String
+  lastName       String
+  role           UserRole
+  organizationId String
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  // Relations
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  ordersCreated  Order[]      @relation("OrderCreator")
+  lockedOrders   Order[]      @relation("OrderLocker")
+
+  @@index([email])
+  @@index([organizationId])
+  @@map("users")
+}
+
+model Organization {
+  id            String           @id @default(cuid())
+  name          String
+  type          OrganizationType
+  parentId      String?
+  address       String
+  contactPerson String
+  phone         String
+  email         String
+  isActive      Boolean          @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  // Relations
+  parent        Organization?    @relation("OrganizationHierarchy", fields: [parentId], references: [id])
+  children      Organization[]   @relation("OrganizationHierarchy")
+  users         User[]
+  ordersFrom    Order[]          @relation("OrderFrom")
+  ordersTo      Order[]          @relation("OrderTo")
+  inventory     Inventory[]
+  transactionsFrom Transaction[] @relation("TransactionFrom")
+  transactionsTo   Transaction[] @relation("TransactionTo")
+
+  @@index([type])
+  @@index([parentId])
+  @@map("organizations")
+}
+
+model Literature {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  category    String
+  price       Decimal   @db.Decimal(10, 2)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  orderItems   OrderItem[]
+  inventory    Inventory[]
+  transactions Transaction[]
+
+  @@index([category])
+  @@index([isActive])
+  @@map("literature")
+}
+
+model Order {
+  id                 String      @id @default(cuid())
+  orderNumber        String      @unique
+  fromOrganizationId String
+  toOrganizationId   String
+  status             OrderStatus @default(DRAFT)
+  totalAmount        Decimal     @db.Decimal(12, 2) @default(0)
+  notes              String?
+  lockedAt           DateTime?
+  lockedById         String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  // Relations
+  fromOrganization Organization @relation("OrderFrom", fields: [fromOrganizationId], references: [id])
+  toOrganization   Organization @relation("OrderTo", fields: [toOrganizationId], references: [id])
+  lockedBy         User?        @relation("OrderLocker", fields: [lockedById], references: [id])
+  items            OrderItem[]
+  transactions     Transaction[]
+
+  @@index([status])
+  @@index([fromOrganizationId])
+  @@index([toOrganizationId])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id           String     @id @default(cuid())
+  orderId      String
+  literatureId String
+  quantity     Int
+  unitPrice    Decimal    @db.Decimal(10, 2)
+  totalPrice   Decimal    @db.Decimal(12, 2)
+
+  // Relations
+  order        Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  literature   Literature @relation(fields: [literatureId], references: [id])
+
+  @@unique([orderId, literatureId])
+  @@index([orderId])
+  @@index([literatureId])
+  @@map("order_items")
+}
+
+model Inventory {
+  id               String       @id @default(cuid())
+  organizationId   String
+  literatureId     String
+  quantity         Int          @default(0)
+  reservedQuantity Int          @default(0)
+  lastUpdated      DateTime     @updatedAt
+
+  // Relations
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  literature       Literature   @relation(fields: [literatureId], references: [id])
+
+  @@unique([organizationId, literatureId])
+  @@index([organizationId])
+  @@index([literatureId])
+  @@map("inventory")
+}
+
+model Transaction {
+  id                   String          @id @default(cuid())
+  type                 TransactionType
+  fromOrganizationId   String?
+  toOrganizationId     String
+  literatureId         String
+  quantity             Int
+  unitPrice            Decimal         @db.Decimal(10, 2)
+  totalAmount          Decimal         @db.Decimal(12, 2)
+  orderId              String?
+  notes                String?
+  createdAt            DateTime        @default(now())
+
+  // Relations
+  fromOrganization     Organization?   @relation("TransactionFrom", fields: [fromOrganizationId], references: [id])
+  toOrganization       Organization    @relation("TransactionTo", fields: [toOrganizationId], references: [id])
+  literature           Literature      @relation(fields: [literatureId], references: [id])
+  order                Order?          @relation(fields: [orderId], references: [id])
+
+  @@index([type])
+  @@index([fromOrganizationId])
+  @@index([toOrganizationId])
+  @@index([literatureId])
+  @@index([createdAt])
+  @@map("transactions")
+}
