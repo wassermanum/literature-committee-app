@@ -6,42 +6,15 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
-// Enum definitions
-enum UserRole {
-  GROUP
-  LOCAL_SUBCOMMITTEE
-  LOCALITY
-  REGION
-  ADMIN
-}
-
-enum OrganizationType {
-  GROUP
-  LOCAL_SUBCOMMITTEE
-  LOCALITY
-  REGION
-}
-
-enum OrderStatus {
-  DRAFT
-  PENDING
-  APPROVED
-  IN_ASSEMBLY
-  SHIPPED
-  DELIVERED
-  COMPLETED
-  REJECTED
-}
-
-enum TransactionType {
-  INCOMING
-  OUTGOING
-  ADJUSTMENT
-}
+// Enum definitions (as strings for SQLite compatibility)
+// UserRole: GROUP, LOCAL_SUBCOMMITTEE, LOCALITY, REGION, ADMIN
+// OrganizationType: GROUP, LOCAL_SUBCOMMITTEE, LOCALITY, REGION  
+// OrderStatus: DRAFT, PENDING, APPROVED, IN_ASSEMBLY, SHIPPED, DELIVERED, COMPLETED, REJECTED
+// TransactionType: INCOMING, OUTGOING, ADJUSTMENT
 
 // Models
 model User {
@@ -50,7 +23,7 @@ model User {
   password       String
   firstName      String
   lastName       String
-  role           UserRole
+  role           String
   organizationId String
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
@@ -69,7 +42,7 @@ model User {
 model Organization {
   id            String           @id @default(cuid())
   name          String
-  type          OrganizationType
+  type          String
   parentId      String?
   address       String
   contactPerson String
@@ -99,7 +72,7 @@ model Literature {
   title       String
   description String
   category    String
-  price       Decimal   @db.Decimal(10, 2)
+  price       Float
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -119,11 +92,12 @@ model Order {
   orderNumber        String      @unique
   fromOrganizationId String
   toOrganizationId   String
-  status             OrderStatus @default(DRAFT)
-  totalAmount        Decimal     @db.Decimal(12, 2) @default(0)
+  status             String @default("DRAFT")
+  totalAmount        Float @default(0)
   notes              String?
   lockedAt           DateTime?
   lockedById         String?
+  createdById        String?
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
 
@@ -131,6 +105,7 @@ model Order {
   fromOrganization Organization @relation("OrderFrom", fields: [fromOrganizationId], references: [id])
   toOrganization   Organization @relation("OrderTo", fields: [toOrganizationId], references: [id])
   lockedBy         User?        @relation("OrderLocker", fields: [lockedById], references: [id])
+  createdBy        User?        @relation("OrderCreator", fields: [createdById], references: [id])
   items            OrderItem[]
   transactions     Transaction[]
 
@@ -146,8 +121,8 @@ model OrderItem {
   orderId      String
   literatureId String
   quantity     Int
-  unitPrice    Decimal    @db.Decimal(10, 2)
-  totalPrice   Decimal    @db.Decimal(12, 2)
+  unitPrice    Float
+  totalPrice   Float
 
   // Relations
   order        Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -179,13 +154,13 @@ model Inventory {
 
 model Transaction {
   id                   String          @id @default(cuid())
-  type                 TransactionType
+  type                 String
   fromOrganizationId   String?
   toOrganizationId     String
   literatureId         String
   quantity             Int
-  unitPrice            Decimal         @db.Decimal(10, 2)
-  totalAmount          Decimal         @db.Decimal(12, 2)
+  unitPrice            Float
+  totalAmount          Float
   orderId              String?
   notes                String?
   createdAt            DateTime        @default(now())

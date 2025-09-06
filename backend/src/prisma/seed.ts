@@ -1,4 +1,37 @@
-import { PrismaClient, UserRole, OrganizationType, OrderStatus, TransactionType } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+
+// Enum types for SQLite compatibility
+enum UserRole {
+  GROUP = 'GROUP',
+  LOCAL_SUBCOMMITTEE = 'LOCAL_SUBCOMMITTEE',
+  LOCALITY = 'LOCALITY',
+  REGION = 'REGION',
+  ADMIN = 'ADMIN'
+}
+
+enum OrganizationType {
+  GROUP = 'GROUP',
+  LOCAL_SUBCOMMITTEE = 'LOCAL_SUBCOMMITTEE',
+  LOCALITY = 'LOCALITY',
+  REGION = 'REGION'
+}
+
+enum OrderStatus {
+  DRAFT = 'DRAFT',
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  IN_ASSEMBLY = 'IN_ASSEMBLY',
+  SHIPPED = 'SHIPPED',
+  DELIVERED = 'DELIVERED',
+  COMPLETED = 'COMPLETED',
+  REJECTED = 'REJECTED'
+}
+
+enum TransactionType {
+  INCOMING = 'INCOMING',
+  OUTGOING = 'OUTGOING',
+  ADJUSTMENT = 'ADJUSTMENT'
+}
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
