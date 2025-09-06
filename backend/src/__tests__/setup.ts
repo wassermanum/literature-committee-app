@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 
 // Настройка тестовой базы данных
-process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/literature_committee_test';
+process.env.DATABASE_URL = 'file:./test.db';
 process.env.JWT_SECRET = 'test-jwt-secret-key';
 process.env.NODE_ENV = 'test';
 

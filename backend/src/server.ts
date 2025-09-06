@@ -5,6 +5,13 @@ import morgan from 'morgan';
 import compression from 'compression';
 import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
+import organizationRoutes from './routes/organizationRoutes.js';
+import literatureRoutes from './routes/literatureRoutes.js';
+import inventoryRoutes from './routes/inventoryRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
+import transactionRoutes from './routes/transactionRoutes.js';
+import reportRoutes from './routes/reportRoutes.js';
 
 // Загружаем переменные окружения
 dotenv.config();
@@ -22,6 +29,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/organizations', organizationRoutes);
+app.use('/api/literature', literatureRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/transactions', transactionRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Базовый маршрут для проверки работы сервера
 app.get('/api/health', (_req, res) => {
