@@ -1,7 +1,9 @@
 import { createTheme, alpha } from '@mui/material/styles';
+import './types'; // Импортируем типы для расширения интерфейса Theme
+import type { CustomColors } from './types';
 
 // Цветовая палитра на основе тёмно-серых/коричневых тонов с синими акцентами
-const colors = {
+const colors: CustomColors = {
   // Основные цвета
   primary: {
     50: '#e3f2fd',
@@ -255,18 +257,11 @@ const theme = createTheme({
   },
 });
 
-// Расширяем тему с кастомными цветами
-declare module '@mui/material/styles' {
-  interface Theme {
-    colors: typeof colors;
-  }
-  interface ThemeOptions {
-    colors?: typeof colors;
-  }
-}
-
-const extendedTheme = createTheme(theme, {
+// Создаем расширенную тему с кастомными цветами
+const extendedTheme = createTheme({
+  ...theme,
   colors,
 });
 
 export default extendedTheme;
+export { colors };

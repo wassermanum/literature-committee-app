@@ -6,15 +6,42 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// Enum definitions (as strings for SQLite compatibility)
-// UserRole: GROUP, LOCAL_SUBCOMMITTEE, LOCALITY, REGION, ADMIN
-// OrganizationType: GROUP, LOCAL_SUBCOMMITTEE, LOCALITY, REGION  
-// OrderStatus: DRAFT, PENDING, APPROVED, IN_ASSEMBLY, SHIPPED, DELIVERED, COMPLETED, REJECTED
-// TransactionType: INCOMING, OUTGOING, ADJUSTMENT
+// Enum definitions for PostgreSQL
+enum UserRole {
+  GROUP
+  LOCAL_SUBCOMMITTEE
+  LOCALITY
+  REGION
+  ADMIN
+}
+
+enum OrganizationType {
+  GROUP
+  LOCAL_SUBCOMMITTEE
+  LOCALITY
+  REGION
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  IN_ASSEMBLY
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  REJECTED
+}
+
+enum TransactionType {
+  INCOMING
+  OUTGOING
+  ADJUSTMENT
+}
 
 // Models
 model User {
@@ -23,7 +50,7 @@ model User {
   password       String
   firstName      String
   lastName       String
-  role           String
+  role           UserRole
   organizationId String
   isActive       Boolean      @default(true)
   createdAt      DateTime     @default(now())
@@ -36,13 +63,15 @@ model User {
 
   @@index([email])
   @@index([organizationId])
+  @@index([role])
+  @@index([organizationId, role])
   @@map("users")
 }
 
 model Organization {
   id            String           @id @default(cuid())
   name          String
-  type          String
+  type          OrganizationType
   parentId      String?
   address       String
   contactPerson String
@@ -64,6 +93,8 @@ model Organization {
 
   @@index([type])
   @@index([parentId])
+  @@index([type, parentId])
+  @@index([isActive])
   @@map("organizations")
 }
 
@@ -92,7 +123,7 @@ model Order {
   orderNumber        String      @unique
   fromOrganizationId String
   toOrganizationId   String
-  status             String @default("DRAFT")
+  status             OrderStatus @default(DRAFT)
   totalAmount        Float @default(0)
   notes              String?
   lockedAt           DateTime?
@@ -113,6 +144,9 @@ model Order {
   @@index([fromOrganizationId])
   @@index([toOrganizationId])
   @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([fromOrganizationId, status])
+  @@index([toOrganizationId, status])
   @@map("orders")
 }
 
@@ -154,7 +188,7 @@ model Inventory {
 
 model Transaction {
   id                   String          @id @default(cuid())
-  type                 String
+  type                 TransactionType
   fromOrganizationId   String?
   toOrganizationId     String
   literatureId         String

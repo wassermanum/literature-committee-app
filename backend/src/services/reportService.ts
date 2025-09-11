@@ -547,8 +547,8 @@ export class ReportService {
     
     if (dateFrom || dateTo) {
       where.createdAt = {};
-      if (dateFrom) where.createdAt.gte = dateFrom;
-      if (dateTo) where.createdAt.lte = dateTo;
+      if (dateFrom) {where.createdAt.gte = dateFrom;}
+      if (dateTo) {where.createdAt.lte = dateTo;}
     }
 
     const transactions = await prisma.transaction.findMany({
@@ -580,8 +580,8 @@ export class ReportService {
     
     if (dateFrom || dateTo) {
       where.createdAt = {};
-      if (dateFrom) where.createdAt.gte = dateFrom;
-      if (dateTo) where.createdAt.lte = dateTo;
+      if (dateFrom) {where.createdAt.gte = dateFrom;}
+      if (dateTo) {where.createdAt.lte = dateTo;}
     }
 
     const orders = await prisma.order.findMany({

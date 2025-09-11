@@ -12,6 +12,8 @@ import inventoryRoutes from './routes/inventoryRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import transactionRoutes from './routes/transactionRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import notificationRoutes from './routes/notifications.js';
+import { ScheduledNotificationService } from './services/scheduledNotificationService.js';
 
 // Загружаем переменные окружения
 dotenv.config();
@@ -36,6 +38,7 @@ app.use('/api/inventory', inventoryRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Базовый маршрут для проверки работы сервера
 app.get('/api/health', (_req, res) => {
@@ -63,11 +66,31 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   });
 });
 
+// Initialize scheduled notification service
+const scheduledNotificationService = new ScheduledNotificationService();
+
 // Запуск сервера только если файл запущен напрямую
 if (process.env.NODE_ENV !== 'test') {
   app.listen(PORT, () => {
     console.log(`🚀 Server is running on port ${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+    
+    // Start scheduled notifications
+    scheduledNotificationService.start();
+    console.log(`📧 Notification services started`);
+  });
+
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully...');
+    scheduledNotificationService.stop();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', () => {
+    console.log('SIGINT received, shutting down gracefully...');
+    scheduledNotificationService.stop();
+    process.exit(0);
   });
 }
 

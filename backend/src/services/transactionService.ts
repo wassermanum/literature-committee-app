@@ -400,7 +400,7 @@ export class TransactionService {
   }
 
   async getTransactionStatistics(organizationId?: string, dateFrom?: Date, dateTo?: Date) {
-    let where: any = {};
+    const where: any = {};
 
     if (organizationId) {
       where.OR = [
@@ -524,7 +524,7 @@ export class TransactionService {
   }
 
   async getMovementReport(organizationId?: string, literatureId?: string, dateFrom?: Date, dateTo?: Date) {
-    let where: any = {};
+    const where: any = {};
 
     if (organizationId) {
       where.OR = [

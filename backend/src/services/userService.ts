@@ -93,7 +93,11 @@ export class UserService {
 
     const user = await prisma.user.create({
       data: {
-        ...userData,
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        role: userData.role as any, // Type assertion for enum compatibility
+        organizationId: userData.organizationId,
         password: hashedPassword,
       },
       include: {
@@ -146,7 +150,13 @@ export class UserService {
 
     const updatedUser = await prisma.user.update({
       where: { id },
-      data: userData,
+      data: {
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        ...(userData.role && { role: userData.role as any }),
+        ...(userData.organizationId && { organizationId: userData.organizationId }),
+      },
       include: {
         organization: {
           select: {
@@ -207,7 +217,7 @@ export class UserService {
   async getUsersByRole(role: string) {
     return await prisma.user.findMany({
       where: {
-        role,
+        role: role as any,
         isActive: true,
       },
       include: {
@@ -243,7 +253,7 @@ export class UserService {
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
-      data: { role },
+      data: { role: role as any },
       include: {
         organization: {
           select: {

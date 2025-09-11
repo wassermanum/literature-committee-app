@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { NotificationService } from './notificationService.js';
+import { logger } from '../utils/logger.js';
 
 const prisma = new PrismaClient();
 
@@ -35,6 +37,8 @@ export interface OrderItemData {
 }
 
 export class OrderService {
+  private notificationService: NotificationService;
+
   // Валидные переходы статусов
   private readonly statusTransitions: Record<string, string[]> = {
     'DRAFT': ['PENDING', 'REJECTED'],
@@ -46,6 +50,10 @@ export class OrderService {
     'COMPLETED': [],
     'REJECTED': []
   };
+
+  constructor() {
+    this.notificationService = new NotificationService();
+  }
 
   async getAllOrders(filters?: OrderFilters) {
     const where: any = {};
@@ -299,7 +307,18 @@ export class OrderService {
     });
 
     // Возвращаем полную информацию о заказе
-    return await this.getOrderById(result.id);
+    const createdOrder = await this.getOrderById(result.id);
+
+    // Отправляем уведомление о создании заказа
+    try {
+      await this.notificationService.notifyOrderCreated(result.id);
+      logger.info(`Order creation notification sent for order ${result.id}`);
+    } catch (error) {
+      logger.error(`Failed to send order creation notification for order ${result.id}:`, error);
+      // Не прерываем выполнение, если уведомление не отправилось
+    }
+
+    return createdOrder;
   }
 
   async updateOrder(id: string, updateData: UpdateOrderData) {
@@ -327,7 +346,9 @@ export class OrderService {
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: {
-        ...updateData,
+        ...(updateData.status && { status: updateData.status as any }),
+        ...(updateData.notes && { notes: updateData.notes }),
+        ...(updateData.totalAmount && { totalAmount: updateData.totalAmount }),
         updatedAt: new Date(),
       },
     });
@@ -363,7 +384,7 @@ export class OrderService {
       await tx.order.update({
         where: { id },
         data: {
-          status,
+          status: status as any,
           notes: notes || existingOrder.notes,
           updatedAt: new Date(),
         },
@@ -394,6 +415,15 @@ export class OrderService {
           break;
       }
     });
+
+    // Отправляем уведомление об изменении статуса заказа
+    try {
+      await this.notificationService.notifyOrderStatusChanged(id, existingOrder.status);
+      logger.info(`Order status change notification sent for order ${id}: ${existingOrder.status} -> ${status}`);
+    } catch (error) {
+      logger.error(`Failed to send order status change notification for order ${id}:`, error);
+      // Не прерываем выполнение, если уведомление не отправилось
+    }
 
     return await this.getOrderById(id);
   }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   AppBar,
   Toolbar,
@@ -16,6 +17,9 @@ import {
   Divider,
   useTheme,
   alpha,
+  Dialog,
+  DialogTitle,
+  DialogContent,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -24,11 +28,14 @@ import {
   Inventory,
   Assessment,
   People,
-  Settings,
+  // Settings, // Unused import
   AccountCircle,
   Logout,
 } from '@mui/icons-material';
 import { SmoothScrollContainer } from '../ui';
+import { useAuth } from '../../contexts/AuthContext';
+import { UserProfile } from '../auth';
+import { UserRole } from '../../types/auth';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -41,14 +48,22 @@ const menuItems = [
   { text: 'Заказы', icon: <ShoppingCart />, path: '/orders' },
   { text: 'Каталог литературы', icon: <Inventory />, path: '/literature' },
   { text: 'Отчеты', icon: <Assessment />, path: '/reports' },
-  { text: 'Пользователи', icon: <People />, path: '/users' },
-  { text: 'Настройки', icon: <Settings />, path: '/settings' },
+  { 
+    text: 'Администрирование', 
+    icon: <People />, 
+    path: '/admin',
+    requiredRoles: [UserRole.ADMIN, UserRole.REGION]
+  },
 ];
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const theme = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user, logout } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -60,6 +75,29 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
 
   const handleProfileMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleProfileClick = () => {
+    setProfileDialogOpen(true);
+    handleProfileMenuClose();
+  };
+
+  const handleLogoutClick = async () => {
+    await logout();
+    handleProfileMenuClose();
+  };
+
+  const handleMenuItemClick = (path: string) => {
+    navigate(path);
+    setDrawerOpen(false);
+  };
+
+  const getInitials = (firstName: string, lastName: string): string => {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  };
+
+  const isActivePath = (path: string): boolean => {
+    return location.pathname === path;
   };
 
   return (
@@ -94,8 +132,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             onClick={handleProfileMenuOpen}
             color="inherit"
           >
-            <Avatar sx={{ width: 32, height: 32, bgcolor: theme.colors.primary[500] }}>
-              И
+            <Avatar 
+              sx={{ 
+                width: 32, 
+                height: 32, 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              }}
+            >
+              {user ? getInitials(user.firstName, user.lastName) : 'U'}
             </Avatar>
           </IconButton>
           <Menu
@@ -111,14 +155,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               },
             }}
           >
-            <MenuItem onClick={handleProfileMenuClose}>
+            <MenuItem onClick={handleProfileClick}>
               <ListItemIcon>
                 <AccountCircle fontSize="small" />
               </ListItemIcon>
               Профиль
             </MenuItem>
             <Divider />
-            <MenuItem onClick={handleProfileMenuClose}>
+            <MenuItem onClick={handleLogoutClick}>
               <ListItemIcon>
                 <Logout fontSize="small" />
               </ListItemIcon>
@@ -151,38 +195,56 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <Toolbar />
         <Box sx={{ overflow: 'auto', p: 2 }}>
           <List>
-            {menuItems.map((item, index) => (
-              <ListItem
-                key={item.text}
-                sx={{
-                  borderRadius: 2,
-                  mb: 1,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    background: alpha(theme.colors.primary[500], 0.1),
-                    transform: 'translateX(4px)',
-                  },
-                }}
-              >
-                <ListItemIcon
+            {menuItems.map((item) => {
+              // Проверяем права доступа к пункту меню
+              if (item.requiredRoles && user && !item.requiredRoles.includes(user.role)) {
+                return null;
+              }
+
+              const isActive = isActivePath(item.path);
+
+              return (
+                <ListItem
+                  key={item.text}
+                  onClick={() => handleMenuItemClick(item.path)}
                   sx={{
-                    color: theme.colors.primary[600],
-                    minWidth: 40,
-                  }}
-                >
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.text}
-                  sx={{
-                    '& .MuiListItemText-primary': {
-                      fontWeight: 500,
-                      color: theme.colors.neutral[700],
+                    borderRadius: 2,
+                    mb: 1,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    background: isActive 
+                      ? alpha(theme.colors.primary[500], 0.15)
+                      : 'transparent',
+                    '&:hover': {
+                      background: alpha(theme.colors.primary[500], 0.1),
+                      transform: 'translateX(4px)',
                     },
                   }}
-                />
-              </ListItem>
-            ))}
+                >
+                  <ListItemIcon
+                    sx={{
+                      color: isActive 
+                        ? theme.colors.primary[600] 
+                        : theme.colors.neutral[600],
+                      minWidth: 40,
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.text}
+                    sx={{
+                      '& .MuiListItemText-primary': {
+                        fontWeight: isActive ? 600 : 500,
+                        color: isActive 
+                          ? theme.colors.primary[700]
+                          : theme.colors.neutral[700],
+                      },
+                    }}
+                  />
+                </ListItem>
+              );
+            })}
           </List>
         </Box>
       </Drawer>
@@ -207,6 +269,19 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {children}
         </SmoothScrollContainer>
       </Box>
+
+      {/* Диалог профиля пользователя */}
+      <Dialog
+        open={profileDialogOpen}
+        onClose={() => setProfileDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Профиль пользователя</DialogTitle>
+        <DialogContent>
+          <UserProfile showLogoutButton={false} />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

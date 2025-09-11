@@ -40,7 +40,7 @@ const StyledSpinnerContainer = styled(Box)<{ isOverlay: boolean }>(({ theme, isO
   }),
 }));
 
-const StyledCircularProgress = styled(CircularProgress)(({ theme }) => ({
+const StyledCircularProgress = styled(CircularProgress)(() => ({
   animation: `${pulseAnimation} 2s ease-in-out infinite`,
   '& .MuiCircularProgress-circle': {
     stroke: `url(#gradient)`,

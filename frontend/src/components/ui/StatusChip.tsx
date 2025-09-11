@@ -49,7 +49,7 @@ const statusConfig = {
 };
 
 const StyledStatusChip = styled(Chip)<{ statusColor: string; statusBackground: string }>(
-  ({ theme, statusColor, statusBackground }) => ({
+  ({ statusColor, statusBackground }) => ({
     backgroundColor: statusBackground,
     color: statusColor,
     fontWeight: 600,

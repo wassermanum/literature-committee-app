@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { NotificationService } from './notificationService.js';
+import { logger } from '../utils/logger.js';
 
 const prisma = new PrismaClient();
 
@@ -21,6 +23,13 @@ export interface BulkInventoryUpdate {
 }
 
 export class InventoryService {
+  private notificationService: NotificationService;
+  private readonly lowStockThreshold: number;
+
+  constructor() {
+    this.notificationService = new NotificationService();
+    this.lowStockThreshold = parseInt(process.env.LOW_INVENTORY_THRESHOLD || '10');
+  }
   async getAllInventory(filters?: InventoryFilters) {
     const where: any = {};
 
@@ -228,6 +237,21 @@ export class InventoryService {
       },
     });
 
+    // Проверяем низкие остатки и отправляем уведомление при необходимости
+    if (inventory.quantity <= this.lowStockThreshold) {
+      try {
+        await this.notificationService.notifyLowInventory(
+          organizationId, 
+          literatureId, 
+          this.lowStockThreshold
+        );
+        logger.info(`Low inventory notification sent for ${literatureId} in ${organizationId}`);
+      } catch (error) {
+        logger.error(`Failed to send low inventory notification:`, error);
+        // Не прерываем выполнение, если уведомление не отправилось
+      }
+    }
+
     return inventory;
   }
 
@@ -418,7 +442,7 @@ export class InventoryService {
       
       await tx.transaction.create({
         data: {
-          type: 'OUTBOUND',
+          type: 'OUTBOUND' as any,
           fromOrganizationId,
           toOrganizationId,
           literatureId,

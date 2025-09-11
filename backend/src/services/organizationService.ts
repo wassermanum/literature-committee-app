@@ -128,7 +128,15 @@ export class OrganizationService {
     }
 
     return await prisma.organization.create({
-      data: organizationData,
+      data: {
+        name: organizationData.name,
+        type: organizationData.type as any,
+        address: organizationData.address,
+        contactPerson: organizationData.contactPerson,
+        phone: organizationData.phone,
+        email: organizationData.email,
+        ...(organizationData.parentId && { parent: { connect: { id: organizationData.parentId } } }),
+      },
       include: {
         parent: {
           select: {
@@ -194,7 +202,15 @@ export class OrganizationService {
 
     return await prisma.organization.update({
       where: { id },
-      data: organizationData,
+      data: {
+        ...(organizationData.name && { name: organizationData.name }),
+        ...(organizationData.type && { type: organizationData.type as any }),
+        ...(organizationData.address && { address: organizationData.address }),
+        ...(organizationData.contactPerson && { contactPerson: organizationData.contactPerson }),
+        ...(organizationData.phone && { phone: organizationData.phone }),
+        ...(organizationData.email && { email: organizationData.email }),
+        ...(organizationData.parentId && { parent: { connect: { id: organizationData.parentId } } }),
+      },
       include: {
         parent: {
           select: {
@@ -288,7 +304,7 @@ export class OrganizationService {
 
     return await prisma.organization.findMany({
       where: {
-        type,
+        type: type as any,
         isActive: true,
       },
       include: {
